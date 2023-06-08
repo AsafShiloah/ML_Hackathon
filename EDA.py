@@ -7,11 +7,8 @@ from plotly.subplots import make_subplots
 
 from preprocess import load_data, preprocess_data, preprocess_Q1
 
-
-
-
-
 # plot for each unique value in colum the perctentage of canceled orders
+
 
 def plot_cancellation_percantage_with_feature_dist(df: pd.DataFrame, feature: str, label: pd.Series):
     # Assuming df is your DataFrame
@@ -73,13 +70,13 @@ def plot_cancellation_percantage_with_feature_dist(df: pd.DataFrame, feature: st
     feature = feature.replace('/', '_')
     fig.write_image(f'graphs/with_dist/percentage_of_cancellation_in_{feature}.png')
 
+
 def pearson_correlation(df: pd.DataFrame, feature1: str, feature2: str):
     # Calculate the correlation between the two columns
     correlation = df[feature1].corr(df[feature2])
 
     # Display the correlation
     print(correlation)
-
 
 
 def plot_cancellation_percentage(df: pd.DataFrame, feature: str, label: pd.Series):
@@ -126,12 +123,14 @@ def plot_cancellation_percentage(df: pd.DataFrame, feature: str, label: pd.Serie
     feature = feature.replace('/', '_')
     fig.write_image(f'graphs/without_dist/percentage_of_cancellation_in_{feature}.png')
 
+
 def feature_eval_graphs(X, y):
     len = X.shape[1]
     for i, col in enumerate(X.columns):
         if 'dummy_' not in col and col[0].isdigit():
             print(col, (i / len)*100)
             plot_cancellation_percentage(X, col, y)
+
 
 def categorial_correlation(feature1: str, feature2: str, df: pd.DataFrame):
     # Create a scatter plot
