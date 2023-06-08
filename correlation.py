@@ -28,7 +28,7 @@ def select_best_features(X, y, k=1):
     feature_scores = selector.scores_
 
     # Plot feature scores
-    fig = go.Figure(data=[go.Bar(x=feature_scores, y=X.columns, orientation='h')])
+    fig = go.Figure(data=[go.Bar(y=feature_scores, x=X.columns, orientation='v')])
     fig.update_layout(
         title='Feature Scores',
         xaxis_title='Score',
@@ -43,6 +43,7 @@ def select_best_features(X, y, k=1):
     most_relevant_score = feature_scores[max_score_index]
 
     return most_relevant_feature, most_relevant_score
+
 
 
 def main():
