@@ -2,6 +2,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import missingno as msno
 
 
 def load_data(path, parse_dates=None):
@@ -23,6 +24,13 @@ def main():
     # Convert specific columns to DateTime type for date-related operations
     data = load_data("train_data.csv", ['booking_datetime', 'checkin_date', 'checkout_date', 'hotel_live_date'])
     # todo: drop dates
+
+    null = 100 * data.isnull().sum() / data.shape[0]
+    # print(null)
+    msno.matrix(data)
+    msno.bar(data)
+    msno.heatmap(data)
+
 
     # drop h_booking_id
     data = data.drop(['h_booking_id'], axis=1)
@@ -82,7 +90,7 @@ def main():
     mismatched_rows = data[(data['guest_is_not_the_customer'] == 0) & (
                 data['customer_nationality'] != data['guest_nationality_country_name'])]
     relevant_columns = ['customer_nationality', 'guest_nationality_country_name']
-    print(mismatched_rows[relevant_columns])
+    # print(mismatched_rows[relevant_columns])
 
     #todo: where we left we have people who ordered their order (0) where customer_nationality != guest_nationality_country_name
     """ -------------------------- dummies values END --------------------------"""
