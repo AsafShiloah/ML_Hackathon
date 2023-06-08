@@ -1,7 +1,6 @@
 import pandas as pd
 from pandas import DataFrame
-import sklearn as sk
-from typing import Optional, NoReturn
+from typing import Optional
 import pycountry
 import numpy as np
 import joblib

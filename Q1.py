@@ -7,18 +7,13 @@ from utils import *
 from sklearn.tree import DecisionTreeClassifier
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from sklearn import metrics
 from sklearn.metrics import confusion_matrix, make_scorer
 import plotly.figure_factory as ff
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import f1_score
-from sklearn.ensemble import RandomForestClassifier
 import plotly.graph_objects as go
-from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
-from sklearn.manifold import Isomap
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.linear_model import RidgeClassifier
