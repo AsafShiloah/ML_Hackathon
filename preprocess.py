@@ -5,6 +5,9 @@ from typing import Optional, NoReturn
 import pycountry
 import numpy as np
 
+dummies_lst = ['hotel_country_code', 'charge_option', 'accommadation_type_name', 'origin_country_code',
+                                'language', 'original_payment_method', 'original_payment_type',
+                                'original_payment_currency', 'guest_nationality_country_name', 'customer_nationality']
 
 def get_country_code(country_name):
     try:
@@ -23,15 +26,18 @@ def load_data(path: str, parse_dates=None) -> DataFrame:
     return pd.read_csv(path, parse_dates=parse_dates)
 
 
-def preproceess_dummies(X: DataFrame, columns: list) -> DataFrame:
+def preproceess_dummies(X: DataFrame, columns: list, flag_train: bool = True) -> DataFrame:
     """
     Create dummies for each column in columns list
+    :param flag_train:
     :param X: DataFrame
     :param columns: list
     :return: DataFrame
     """
     for column in columns:
         X = pd.get_dummies(X, columns=[column], prefix=f'dummy_{column}_')
+    if not flag_train:
+        X = X.reindex(columns=train_cols, fill_value=0)
     return X
 
 
@@ -40,7 +46,7 @@ def process_dates(X: DataFrame) -> DataFrame:
     X['trip_duration'] = (X['checkout_date'] - X['checkin_date']).dt.total_seconds() / 3600
 
     # Calculate number of days before booking
-    X['hours_before_booking'] = (X['checkin_date'] - X['booking_datetime']).dt.total_seconds() / 3600
+    X['days_before_booking'] = (X['checkin_date'] - X['booking_datetime']).dt.total_seconds() / 3600
 
     # Check if check-in date is a weekend
     X['is_weekend'] = X['checkin_date'].dt.weekday.isin([5, 6])
@@ -67,18 +73,16 @@ def preprocess_drop(X: DataFrame, columns: list) -> DataFrame:
     return X.drop(columns=columns)
 
 
-def preprocess_data(X: pd.DataFrame):
+def preprocess_data(X: pd.DataFrame, flag_train: bool = True) -> pd.DataFrame:
     """
     Preprocess the data.
     :param df: DataFrame
     :return: DataFrame
     """
-
-    # X = X.drop(['h_booking_id'], axis=1)
+    # Drop columns
+    X = X.drop(['h_booking_id'], axis=1)
     X = process_dates(X)
-    X = preproceess_dummies(X, ['hotel_country_code', 'charge_option', 'accommadation_type_name', 'origin_country_code',
-                                'language', 'original_payment_method', 'original_payment_type',
-                                'original_payment_currency', 'guest_nationality_country_name', 'customer_nationality'])
+
 
     # Calculate the number of orders per hotel_id
     X['no_orders_of_hotel'] = X.groupby('hotel_id')['hotel_id'].transform('count')
@@ -95,7 +99,6 @@ def preprocess_data(X: pd.DataFrame):
     X['is_user_logged_in'] = X['is_user_logged_in'].astype(int)
     X['is_first_booking'] = X['is_first_booking'].astype(int)
     X['is_weekend'] = X['is_weekend'].astype(int)
-
 
     # fill na with 0 in requests:
     X['request_nonesmoke'] = X['request_nonesmoke'].fillna(0)
@@ -114,7 +117,11 @@ def preprocess_data(X: pd.DataFrame):
 
     """ -------------------------- cancellation policy handle --------------------------"""
     X['cancellation_policy_code'] = X['cancellation_policy_code'].combine(X['trip_duration'],
-                                                                          lambda x, y: order_policies(x, y))
+                                                                        lambda x, y: order_policies(x, y))
+    ############################################################
+    # reset index of X
+    X = X.reset_index(drop=True)
+
     for i in range(0, 10):
         X[f'{i * 10 + 1}-{(i + 1) * 10}'] = np.zeros(X.shape[0])
     for idx, list_of_lists in enumerate(X['cancellation_policy_code']):
@@ -128,27 +135,20 @@ def preprocess_data(X: pd.DataFrame):
             for col in cols:
                 if X.at[idx, col] == 0:
                     X.at[idx, col] = str(day)
+
     # Replace the NaNs with an empty string
     X.fillna(0, inplace=True)
 
     # drop cancellation_policy_code:
     # X = X.drop(['cancellation_policy_code'], axis=1)
+
     X = X.drop(
         columns=['cancellation_policy_code', 'booking_datetime', 'checkin_date', 'checkout_date', 'hotel_live_date',
-                 'h_customer_id', 'hotel_id', 'Unnamed: 0'])
-
-    X['1-10'] = X['1-10'].astype(int)
-    X['11-20'] = X['11-20'].astype(int)
-    X['21-30'] = X['21-30'].astype(int)
-    X['31-40'] = X['31-40'].astype(int)
-    X['41-50'] = X['41-50'].astype(int)
-    X['51-60'] = X['51-60'].astype(int)
-    X['61-70'] = X['61-70'].astype(int)
-    X['71-80'] = X['71-80'].astype(int)
-    X['81-90'] = X['81-90'].astype(int)
-    X['91-100'] = X['91-100'].astype(int)
-
-    X = preprocess_additional(X)
+                 'h_customer_id', 'hotel_id'])
+    X = preproceess_dummies(X, dummies_lst, flag_train)
+    if flag_train:
+        global train_cols
+        train_cols = X.columns
     return X
 
 
@@ -188,44 +188,6 @@ def preprocess_Q1(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X, y = split_data_label(X, 'cancellation_datetime')
     y = y.fillna(0).apply(lambda x: 1 if x != 0 else 0)
     return X, y
-
-def preprocess_Q2(X: pd.DataFrame, y: Optional[pd.Series] = None):
-    X, y = split_data_label(X, 'original_selling_amount')
-    # X = X[X['original_selling_amount'] < 1000]
-
-    # remove matching lines from y
-
-    # create dummies for cancellation_datetime
-    # X['cancellation_datetime'] = X['cancellation_datetime'].fillna(0)
-    # X = pd.get_dummies(X, 'cancellation_datetime')
-    return X, y
-
-def preprocess_train(X: pd.DataFrame, y: Optional[pd.Series] = None):
-    X = X[X["no_of_adults"] <= 12]
-    X = X[X["no_of_children"] <= 5]
-    X = X[X["no_of_room"] <= 5]
-    # todo: remove the two line below
-    X = X[X["trip_duration"] <= 400]
-    X = X[X["1-10"] <= 150]
-    X = X[X["11-20"] <= 150]
-    X = X[X["21-30"] <= 150]
-    X = X[X["31-40"] <= 150]
-    X = X[X["41-50"] <= 150]
-    X = X[X["51-60"] <= 150]
-    X = X[X["51-60"] <= 150]
-    X = X[X["61-70"] <= 150]
-    X = X[X["71-80"] <= 150]
-    X = X[X["81-90"] <= 150]
-    X = X[X["91-100"] <= 150]
-
-    y = y.loc[X.index].fillna(0)
-    return X, y
-
-def preprocess_additional(X: pd.DataFrame):
-    X = X.drop(['hotel_area_code', 'hotel_chain_code', 'hotel_area_code', 'hotel_brand_code', 'hotel_city_code',
-                'is_first_booking', 'is_weekend'], axis=1)
-
-    return X
 
 
 if __name__ == "__main__":
