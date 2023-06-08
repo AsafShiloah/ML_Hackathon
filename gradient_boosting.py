@@ -20,7 +20,7 @@ def gradient_boosting(X_train, X_test, y_train, y_test, learning_rate=0.1, n_est
     y_pred = gbc.predict(X_test)
 
     # Compute F1 score of the prediction
-    f1 = f1_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred,average='macro')
 
     print('F1 Score:', f1)
 

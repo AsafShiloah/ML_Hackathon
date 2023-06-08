@@ -20,7 +20,7 @@ def naive_bayes(X_train, X_test, y_train, y_test):
     # Create confusion matrix
     cnf_matrix = confusion_matrix(y_test, y_pred)
 
-    f1 = f1_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average='macro')
     print(f"NaiveBayes F1 Score: {f1}")
     # Convert confusion matrix to DataFrame
     df_cm = pd.DataFrame(cnf_matrix, columns=['Predicted 0', 'Predicted 1'], index=['Actual 0', 'Actual 1'])
@@ -94,7 +94,7 @@ def main():
     X, y = preprocess_Q1(data)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
     naive_bayes(X_train, X_test, y_train, y_test)
-    ensemble_naive_bayes(X_train, X_test, y_train, y_test)
+    # ensemble_naive_bayes(X_train, X_test, y_train, y_test)
 
 if __name__ == '__main__':
     np.random.seed(0)
