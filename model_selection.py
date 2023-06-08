@@ -1,26 +1,23 @@
-import pandas as pd
-import sklearn as sk
-import numpy as np
-import plotly.graph_objects as go
-
 from preprocess import *
 from utils import *
-from scipy.stats import norm
-from sklearn.model_selection import train_test_split, KFold
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import GridSearchCV
+
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
-# Importing necessary libraries
 import numpy as np
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, make_scorer
 import plotly.figure_factory as ff
-import plotly.express as px
-from sklearn.metrics import roc_curve, auc
-
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import f1_score
+from sklearn.ensemble import RandomForestClassifier
+import plotly.graph_objects as go
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import f1_score
+from sklearn.manifold import Isomap
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.model_selection import cross_val_score
 
 def logistic_regression(X_train, X_test, y_train, y_test):
     # Initializing the logistic regression model
@@ -33,11 +30,12 @@ def logistic_regression(X_train, X_test, y_train, y_test):
     y_pred = lr.predict(X_test)
 
     # Printing the accuracy of the model
-    print('Logistic Accuracy: ', metrics.accuracy_score(y_test, y_pred))
+    f1 = f1_score(y_test, y_pred, average='macro')
+    print('Decision Tree Accuracy: ', f1)
 
 
 def knn(X_train, X_test, y_train, y_test):
-    # Initialize the KNN classifier with some value of K, for example, 5
+
     knn = KNeighborsClassifier(n_neighbors=5)
 
     # Fit the data to the model
@@ -46,8 +44,9 @@ def knn(X_train, X_test, y_train, y_test):
     # Predict the values for the test set
     y_pred = knn.predict(X_test)
 
-    # Printing the accuracy of the model
-    print('KNN Accuracy: ', metrics.accuracy_score(y_test, y_pred))
+    # Compute and print the F1 score
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    print('F1 Score: ', f1)
 
 
 def confusion_matrix(y_test, y_pred):
@@ -65,9 +64,10 @@ def confusion_matrix(y_test, y_pred):
 
     fig.show()
 
+
 def decision_trees(X_train, X_test, y_train, y_test):
     # Initialize the Decision Tree Classifier
-    dt = DecisionTreeClassifier(random_state=0)
+    dt = DecisionTreeClassifier(max_depth=4)
 
     # Fit the data to the model
     dt.fit(X_train, y_train)
@@ -76,39 +76,151 @@ def decision_trees(X_train, X_test, y_train, y_test):
     y_pred = dt.predict(X_test)
 
     # Printing the accuracy of the model
-    print('Decision Tree Accuracy: ', metrics.accuracy_score(y_test, y_pred))
+    f1 = f1_score(y_test, y_pred, average='macro')
+    print('Decision Tree Accuracy: ', f1)
 
 
-def graph_sigmoid(X,y):
-    c = [custom[0], custom[-1]]
-    model = LogisticRegression(penalty="none").fit(X, y)
-    y_prob = model.predict_proba(X)[:, 1]
+def perform_cross_validation(X, y, depths, cv=5):
+    """
+    Perform cross-validation for hyperparameter tuning using a decision tree classifier.
 
-    go.Figure([
-        go.Scatter3d(x=X[:, 0], y=X[:, 1], z=[-0.1] * X.shape[0], mode='markers',
-                     marker=dict(color=y, symbol="circle-open", colorscale=c, reversescale=True, size=1)),
-        go.Scatter3d(x=X[:, 0], y=X[:, 1], z=y_prob, mode='markers',
-                     marker=dict(color=y_prob, colorscale=custom, reversescale=True, showscale=True, size=3))],
-        layout=go.Layout(title=r"$(2)\text{ Predicted Class Probabilities}$",
-                         scene_aspectmode="cube", showlegend=False,
-                         scene=dict(xaxis_title="Feature 1",
-                                    yaxis_title="Feature 2",
-                                    zaxis_title="Probabilty of Assigning Class 1",
-                                    camera=dict(eye=dict(x=1, y=-1.8, z=.1))))).show()
+    Parameters:
+        X (array-like): The input features.
+        y (array-like): The target variable.
+        param_grid (dict): Dictionary specifying the hyperparameter grid to search.
+        cv (int, optional): Number of cross-validation folds. Default is 5.
 
+    Returns:
+        float: The average accuracy score across cross-validation folds.
+    """
+    scores_by_depth = {}  # Dictionary to store scores for each depth
+
+    # Define F1 scorer
+    f1_scorer = make_scorer(f1_score)
+
+    for depth in depths:
+        dt_classifier = DecisionTreeClassifier(max_depth=depth)
+        scores = cross_val_score(dt_classifier, X, y, cv=cv, scoring=f1_scorer)
+        scores_by_depth[depth] = scores.mean()
+
+    return scores_by_depth
+
+
+def random_forrest(X_train, X_test, y_train, y_test):
+    rf = RandomForestClassifier(n_estimators=100)
+
+    # Fit the model to the data
+    rf.fit(X_train, y_train)
+
+    # Get feature importances
+    importances = rf.feature_importances_
+
+    # Create a list of feature names
+    feature_names = X_train.columns
+
+    # Sort feature importances in descending order
+    indices = np.argsort(importances)[::-1]
+
+    # Print the feature ranking
+    print("Feature ranking:")
+    for i, index in enumerate(indices):
+        print(f"{i + 1}. {feature_names[index]} ({importances[index]:.4f})")
+    # Predict the values for the test set
+    y_pred = rf.predict(X_test)
+
+    # Compute and print the F1 score
+    f1 = f1_score(y_test, y_pred, average='macro')
+    print('F1 Score: ', f1)
+
+    def omri(X,y):
+        params = [2, 4, 6, 8]
+
+        scores_by_depth = perform_cross_validation(X, y, params)
+
+        # Print the average scores for each tree depth
+        for depth, score in scores_by_depth.items():
+            print(f"Tree Depth: {depth}, Average Score: {score}")
+
+
+def ada_boost(X, y):
+
+    # Create the AdaBoost classifier
+    adaboost = AdaBoostClassifier(n_estimators=100, random_state=42)
+
+    # Perform k-fold cross-validation with F1 score using macro averaging
+    k = 5  # Number of folds
+    scores = cross_val_score(adaboost, X, y, cv=k, scoring='f1_macro')
+
+    # Print the average F1 score across all folds
+    print("Average F1 Score (Macro):", scores.mean())
+
+
+
+def random_forrest_k_cross(X, y):
+    # Create the Random Forest classifier
+
+    rf = RandomForestClassifier(n_estimators=100)
+
+    # Perform k-fold cross-validation with F1 score using macro averaging
+    k = 5  # Number of folds
+    scores = cross_val_score(rf, X, y, cv=k, scoring='f1_macro')
+
+    # Print the average F1 score across all folds
+    print("Average F1 Score (Macro):", scores.mean())
+
+def random_forrest_by_k(X_train, X_test, y_train, y_test):
+    # Define a range of n_estimators values to try
+    n_estimators_range = range(1, 150, 20)
+
+    # Initialize a list to store the F1 scores
+    f1_scores = []
+
+    # Loop over the n_estimators values
+    for n_estimators in n_estimators_range:
+        print(n_estimators)
+        # Initialize the Random Forest classifier with the current number of estimators
+        rf = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
+
+        # Fit the data to the model
+        rf.fit(X_train, y_train)
+
+        # Predict the values for the test set
+        y_pred = rf.predict(X_test)
+
+        # Compute the F1 score and append it to the list of F1 scores
+        f1 = f1_score(y_test, y_pred, average='macro')
+        f1_scores.append(f1)
+
+    # Create a DataFrame with the F1 scores
+    df = pd.DataFrame({
+        'n_estimators': n_estimators_range,
+        'F1 Score': f1_scores
+    })
+
+    # Create a line plot of the F1 scores
+    fig = px.line(df, x='n_estimators', y='F1 Score', title='F1 Score as a Function of n_estimators')
+    fig.show()
 
 def main():
     data = load_data('train_data.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
                                                     'hotel_live_date'])
     data = preprocess_data(data)
     X, y = preprocess_Q1(data)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
 
-    logistic_regression(X_train, X_test, y_train, y_test)
-    knn(X_train, X_test, y_train, y_test)
-    decision_trees(X_train, X_test, y_train, y_test)
+    # Split the data into a training set and a test set
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # X_train, y_train = preprocess_train(X_train, y_train)
+    # print(X_train.shape, y_train.shape)
 
+    # random_forrest(X_train, X_test, y_train, y_test)
+    # logistic_regression(X_train, X_test, y_train, y_test)
+    # decision_trees(X_train, X_test, y_train, y_test)
+    # random_forrest_by_k(X_train, X_test, y_train, y_test)
+
+    # random_forrest_k_cross(X, y)
+    ada_boost(X,y)
 
 if __name__ == '__main__':
     np.random.seed(0)
     main()
+

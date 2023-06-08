@@ -40,7 +40,7 @@ def process_dates(X: DataFrame) -> DataFrame:
     X['trip_duration'] = (X['checkout_date'] - X['checkin_date']).dt.total_seconds() / 3600
 
     # Calculate number of days before booking
-    X['days_before_booking'] = (X['checkin_date'] - X['booking_datetime']).dt.total_seconds() / 3600
+    X['hours_before_booking'] = (X['checkin_date'] - X['booking_datetime']).dt.total_seconds() / 3600
 
     # Check if check-in date is a weekend
     X['is_weekend'] = X['checkin_date'].dt.weekday.isin([5, 6])
@@ -96,6 +96,7 @@ def preprocess_data(X: pd.DataFrame):
     X['is_first_booking'] = X['is_first_booking'].astype(int)
     X['is_weekend'] = X['is_weekend'].astype(int)
 
+
     # fill na with 0 in requests:
     X['request_nonesmoke'] = X['request_nonesmoke'].fillna(0)
     X['request_latecheckin'] = X['request_latecheckin'].fillna(0)
@@ -136,6 +137,18 @@ def preprocess_data(X: pd.DataFrame):
         columns=['cancellation_policy_code', 'booking_datetime', 'checkin_date', 'checkout_date', 'hotel_live_date',
                  'h_customer_id', 'hotel_id', 'Unnamed: 0'])
 
+    X['1-10'] = X['1-10'].astype(int)
+    X['11-20'] = X['11-20'].astype(int)
+    X['21-30'] = X['21-30'].astype(int)
+    X['31-40'] = X['31-40'].astype(int)
+    X['41-50'] = X['41-50'].astype(int)
+    X['51-60'] = X['51-60'].astype(int)
+    X['61-70'] = X['61-70'].astype(int)
+    X['71-80'] = X['71-80'].astype(int)
+    X['81-90'] = X['81-90'].astype(int)
+    X['91-100'] = X['91-100'].astype(int)
+
+    X = preprocess_additional(X)
     return X
 
 
@@ -175,6 +188,33 @@ def preprocess_Q1(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X, y = split_data_label(X, 'cancellation_datetime')
     y = y.fillna(0).apply(lambda x: 1 if x != 0 else 0)
     return X, y
+
+def preprocess_train(X: pd.DataFrame, y: Optional[pd.Series] = None):
+    X = X[X["no_of_adults"] <= 12]
+    X = X[X["no_of_children"] <= 5]
+    X = X[X["no_of_room"] <= 5]
+    # todo: remove the two line below
+    X = X[X["trip_duration"] <= 400]
+    X = X[X["1-10"] <= 150]
+    X = X[X["11-20"] <= 150]
+    X = X[X["21-30"] <= 150]
+    X = X[X["31-40"] <= 150]
+    X = X[X["41-50"] <= 150]
+    X = X[X["51-60"] <= 150]
+    X = X[X["51-60"] <= 150]
+    X = X[X["61-70"] <= 150]
+    X = X[X["71-80"] <= 150]
+    X = X[X["81-90"] <= 150]
+    X = X[X["91-100"] <= 150]
+
+    y = y.loc[X.index].fillna(0)
+    return X, y
+
+def preprocess_additional(X: pd.DataFrame):
+    X = X.drop(['hotel_area_code', 'hotel_chain_code', 'hotel_area_code', 'hotel_brand_code', 'hotel_city_code',
+                'is_first_booking', 'is_weekend'], axis=1)
+
+    return X
 
 
 if __name__ == "__main__":
