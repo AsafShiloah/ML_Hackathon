@@ -300,8 +300,7 @@ def main():
     X_train = X_train.drop(['h_booking_id'], axis=1)
     X_test = X_test.drop(['h_booking_id'], axis=1)
     """return Q1"""
-    # y_pred, rf = random_forrest(X_train, X_test, y_train, y_test)
-    y_pred
+    y_pred, rf = random_forrest(X_train, X_test, y_train, y_test)
 
 
     result = pd.concat([id, pd.Series(y_pred)], axis=1)
