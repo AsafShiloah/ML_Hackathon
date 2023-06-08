@@ -30,7 +30,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     :return: DataFrame
     """
 
-    X = X.drop(['h_booking_id', 'Unnamed: 0'], axis=1)
+    X = X.drop(['h_booking_id'], axis=1)
 
     # Calculate trip duration in hours
     X['trip_duration'] = (X['checkout_date'] - X['checkin_date']).dt.total_seconds() / 3600
@@ -61,7 +61,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     """ -------------------------- count stuff END --------------------------"""
 
     # X['customer_nationality'] = X['customer_nationality'].fillna(get_country_code(X['country_name'])) if X[
-    #     'country_name'] else X['country_name'].fillna('KR')
+    #     'country_name'] else X['country_name'].fillna(X['country_name'].mode()[0])
 
     # todo: change all countries to countries code
 
