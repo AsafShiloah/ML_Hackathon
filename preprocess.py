@@ -23,15 +23,19 @@ def load_data(path: str, parse_dates=None) -> DataFrame:
     return pd.read_csv(path, parse_dates=parse_dates)
 
 
-def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
+def preproceess_dummies(X: DataFrame, columns: list) -> DataFrame:
     """
-    Preprocess the data.
-    :param df: DataFrame
+    Create dummies for each column in columns list
+    :param X: DataFrame
+    :param columns: list
     :return: DataFrame
     """
+    for column in columns:
+        X = pd.get_dummies(X, columns=[column], prefix=f'dummy_{column}_')
+    return X
 
-    X = X.drop(['h_booking_id'], axis=1)
 
+def process_dates(X: DataFrame) -> DataFrame:
     # Calculate trip duration in hours
     X['trip_duration'] = (X['checkout_date'] - X['checkin_date']).dt.total_seconds() / 3600
 
@@ -48,9 +52,33 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X['month_checkin'] = X['checkin_date'].dt.month.astype(int)
 
     # Calculate the period between hotel live date and booking date in hours
-    X['hotel_live_period'] = (X['hotel_live_date'] - X['booking_datetime']).dt.total_seconds() / 3600
+    X['hotel_live_period'] = (X['booking_datetime'] - X['hotel_live_date']).dt.total_seconds() / 3600
 
-    """ -------------------------- preprocess dates END --------------------------"""
+    return X
+
+
+def preprocess_drop(X: DataFrame, columns: list) -> DataFrame:
+    """
+    Drop columns from DataFrame
+    :param X: DataFrame
+    :param columns: list
+    :return: DataFrame
+    """
+    return X.drop(columns=columns)
+
+
+def preprocess_data(X: pd.DataFrame):
+    """
+    Preprocess the data.
+    :param df: DataFrame
+    :return: DataFrame
+    """
+
+    X = X.drop(['h_booking_id'], axis=1)
+    X = process_dates(X)
+    X = preproceess_dummies(X, ['hotel_country_code', 'charge_option', 'accommadation_type_name', 'origin_country_code',
+                                'language', 'original_payment_method', 'original_payment_type',
+                                'original_payment_currency', 'guest_nationality_country_name', 'customer_nationality'])
 
     # Calculate the number of orders per hotel_id
     X['no_orders_of_hotel'] = X.groupby('hotel_id')['hotel_id'].transform('count')
@@ -58,51 +86,15 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     # Calculate the number of orders per h_customer_id
     X['no_orders_of_customer'] = X.groupby('h_customer_id')['h_customer_id'].transform('count')
 
-    """ -------------------------- count stuff END --------------------------"""
-
-    # X['customer_nationality'] = X['customer_nationality'].fillna(get_country_code(X['country_name'])) if X[
-    #     'country_name'] else X['country_name'].fillna(X['country_name'].mode()[0])
+    # X['customer_nationality'] = X['customer_nationality'].fillna(get_country_code(X['origin_country_code'])) if X[
+    #     'origin_country_code'] else X['origin_country_code'].fillna(X['origin_country_code'].mode()[0])
 
     # todo: change all countries to countries code
-
-    # fill na in origin country with
-    # X['origin_country_code'] = X['origin_country_code'].fillna(get_country_code(X['country_name'])) if X[
-    #     'country_name'] else X['country_name'].fillna('KR')
-
-    """ -------------------------- dummies values start --------------------------"""
-
-    # create dummies for hotel_country_code
-    # X = pd.get_dummies(X, columns=['hotel_country_code'], prefix='dummy_hotel_country_')
-
-    # create dummies for charge_option
-    # X = pd.get_dummies(X, columns=['charge_option'], prefix='dummy_charge_')
-
-    # create dummies for accommadation_type_name
-    #todo: check if need dummies
-    # X = pd.get_dummies(X, columns=['accommadation_type_name'])
-
-    # create dummies for origin country:
-    # X = pd.get_dummies(X, columns=['origin_country_code'], prefix='dummy_code_')  # TODO: check if need GLOBAL
-
-    # create dummies for language:
-    # X = pd.get_dummies(X, columns=['language'], prefix='dummy_lang_')  # TODO: check if need GLOBAL
-
-    # TODO:replace UNKNOWN in original payment method:
-    # X['original_payment_method'] = X['original_payment_method'].replace('UNKNOWN', 'OTHER')
-
-    # create dummies for payment method:
-    # X = pd.get_dummies(X, columns=['original_payment_method'], prefix='dummy_pay_method_')  # TODO: check if need GLOBAL
-
-    # create dummies for original payment type:
-    # X = pd.get_dummies(X, columns=['original_payment_type'], prefix='dummy_pay_type_')  # TODO: check if need GLOBAL
-
-    # create dummies for original payment currency:
-    # X = pd.get_dummies(X, columns=['original_payment_currency'],
-                       # prefix='dummy_pay_currency_')  # TODO: check if need GLOBAL, cor with country code
 
     # convert bool to int:
     X['is_user_logged_in'] = X['is_user_logged_in'].astype(int)
     X['is_first_booking'] = X['is_first_booking'].astype(int)
+    X['is_weekend'] = X['is_weekend'].astype(int)
 
     # fill na with 0 in requests:
     X['request_nonesmoke'] = X['request_nonesmoke'].fillna(0)
@@ -119,14 +111,9 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     # change all rating that are larger than 5 to 5
     X['hotel_star_rating'] = X['hotel_star_rating'].apply(lambda x: 5 if x > 5 else x)
 
-    # cancelation policy code:
-
-    # X['dayes_before_checkin'] = X['cancellation_policy_code'].fillna(0)
-
     """ -------------------------- cancellation policy handle --------------------------"""
     X['cancellation_policy_code'] = X['cancellation_policy_code'].combine(X['trip_duration'],
                                                                           lambda x, y: order_policies(x, y))
-
     for i in range(0, 10):
         X[f'{i * 10 + 1}-{(i + 1) * 10}'] = np.zeros(X.shape[0])
     for idx, list_of_lists in enumerate(X['cancellation_policy_code']):
@@ -144,13 +131,15 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X.fillna(0, inplace=True)
 
     # drop cancellation_policy_code:
-    X = X.drop(['cancellation_policy_code'], axis=1)
+    # X = X.drop(['cancellation_policy_code'], axis=1)
+    X = X.drop(
+        columns=['cancellation_policy_code', 'booking_datetime', 'checkin_date', 'checkout_date', 'hotel_live_date',
+                 'h_customer_id', 'hotel_id', 'Unnamed: 0'])
+
     return X
 
+
 def order_policies(policies, duration):
-    # policies = row['cancellation_policy_code']
-    # print(policies)
-    # duration = row['trip_duration']
     if policies == 'UNKNOWON':  # TODO: check if needed
         policies = '7D100P'
     policies_arr = []
@@ -158,9 +147,7 @@ def order_policies(policies, duration):
         policies_arr = policies.split("_")
     else:
         policies_arr.append(policies)
-    # print(policies,policies_arr)
     if 'D' not in policies_arr[-1]:
-        # no show
         policies_arr = policies_arr[:-1]
 
     policies_arr = [[policy.split('D')[0], policy.split('D')[1]] for policy in policies_arr]
@@ -189,19 +176,7 @@ def preprocess_Q1(X: pd.DataFrame, y: Optional[pd.Series] = None):
     y = y.fillna(0).apply(lambda x: 1 if x != 0 else 0)
     return X, y
 
+
 if __name__ == "__main__":
     path = "train_data.csv"
     df = load_data(path, ['booking_datetime', 'checkin_date', 'checkout_date', 'hotel_live_date'])
-    # for column_name in df.columns:
-    #     print(df[column_name].describe())
-    #     print("")
-    #     print("")
-    #
-
-    # print(df['request_nonesmoke'].dropna().describe())
-    # print('no_of_extra_bed:',df['no_of_extra_bed'].unique())
-    # print('no_of_room',df['no_of_room'].unique())
-    # # print('origin_country_code:', df['origin_country_code'].unique())
-    # # print('origin_country_code:', df['origin_country_code'].dropna().unique())
-    # print('origin_country_code:', df['origin_country_code'].describe())
-    # TODO split no show via _ and then via 'D'

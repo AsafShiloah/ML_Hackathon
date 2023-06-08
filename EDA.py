@@ -154,5 +154,3 @@ if __name__ == '__main__':
                                                     'hotel_live_date'])
     data = preprocess_data(data)
     X, y = preprocess_Q1(data)
-    # print(X.columns)
-    eda(X, y)
