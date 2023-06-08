@@ -3,6 +3,7 @@ from pandas import DataFrame
 import sklearn as sk
 from typing import Optional, NoReturn
 import pycountry
+import numpy as np
 
 
 def get_country_code(country_name):
@@ -29,7 +30,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     :return: DataFrame
     """
 
-    X = X.drop(['h_booking_id'], axis=1)
+    X = X.drop(['h_booking_id', 'Unnamed: 0'], axis=1)
 
     # Calculate trip duration in hours
     X['trip_duration'] = (X['checkout_date'] - X['checkin_date']).dt.total_seconds() / 3600
@@ -59,44 +60,45 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
 
     """ -------------------------- count stuff END --------------------------"""
 
-    X['customer_nationality'] = X['customer_nationality'].fillna(get_country_code(X['country_name'])) if X[
-        'country_name'] else X['country_name'].fillna('KR')
+    # X['customer_nationality'] = X['customer_nationality'].fillna(get_country_code(X['country_name'])) if X[
+    #     'country_name'] else X['country_name'].fillna('KR')
 
     # todo: change all countries to countries code
 
     # fill na in origin country with
-    X['origin_country_code'] = X['origin_country_code'].fillna(get_country_code(X['country_name'])) if X[
-        'country_name'] else X['country_name'].fillna('KR')
+    # X['origin_country_code'] = X['origin_country_code'].fillna(get_country_code(X['country_name'])) if X[
+    #     'country_name'] else X['country_name'].fillna('KR')
 
     """ -------------------------- dummies values start --------------------------"""
 
     # create dummies for hotel_country_code
-    X = pd.get_dummies(X, columns=['hotel_country_code'])
+    # X = pd.get_dummies(X, columns=['hotel_country_code'], prefix='dummy_hotel_country_')
 
     # create dummies for charge_option
-    X = pd.get_dummies(X, columns=['charge_option'])
+    # X = pd.get_dummies(X, columns=['charge_option'], prefix='dummy_charge_')
 
     # create dummies for accommadation_type_name
-    X = pd.get_dummies(X, columns=['accommadation_type_name'])
+    #todo: check if need dummies
+    # X = pd.get_dummies(X, columns=['accommadation_type_name'])
 
     # create dummies for origin country:
-    X = pd.get_dummies(X, columns=['origin_country_code'], prefix='code_')  # TODO: check if need GLOBAL
+    # X = pd.get_dummies(X, columns=['origin_country_code'], prefix='dummy_code_')  # TODO: check if need GLOBAL
 
     # create dummies for language:
-    X = pd.get_dummies(X, columns=['language'], prefix='lang_')  # TODO: check if need GLOBAL
+    # X = pd.get_dummies(X, columns=['language'], prefix='dummy_lang_')  # TODO: check if need GLOBAL
 
     # TODO:replace UNKNOWN in original payment method:
     # X['original_payment_method'] = X['original_payment_method'].replace('UNKNOWN', 'OTHER')
 
     # create dummies for payment method:
-    X = pd.get_dummies(X, columns=['original_payment_method'], prefix='pay_method_')  # TODO: check if need GLOBAL
+    # X = pd.get_dummies(X, columns=['original_payment_method'], prefix='dummy_pay_method_')  # TODO: check if need GLOBAL
 
     # create dummies for original payment type:
-    X = pd.get_dummies(X, columns=['original_payment_type'], prefix='pay_type_')  # TODO: check if need GLOBAL
+    # X = pd.get_dummies(X, columns=['original_payment_type'], prefix='dummy_pay_type_')  # TODO: check if need GLOBAL
 
     # create dummies for original payment currency:
-    X = pd.get_dummies(X, columns=['original_payment_currency'],
-                       prefix='pay_currency_')  # TODO: check if need GLOBAL, cor with country code
+    # X = pd.get_dummies(X, columns=['original_payment_currency'],
+                       # prefix='dummy_pay_currency_')  # TODO: check if need GLOBAL, cor with country code
 
     # convert bool to int:
     X['is_user_logged_in'] = X['is_user_logged_in'].astype(int)
@@ -111,10 +113,84 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X['request_airport'] = X['request_airport'].fillna(0)
     X['request_earlycheckin'] = X['request_earlycheckin'].fillna(0)
 
+    # change all rating that are negative to 0
+    X['hotel_star_rating'] = X['hotel_star_rating'].apply(lambda x: 0 if x < 0 else x)
+
+    # change all rating that are larger than 5 to 5
+    X['hotel_star_rating'] = X['hotel_star_rating'].apply(lambda x: 5 if x > 5 else x)
+
     # cancelation policy code:
 
     # X['dayes_before_checkin'] = X['cancellation_policy_code'].fillna(0)
 
+    """ -------------------------- cancellation policy handle --------------------------"""
+    X['cancellation_policy_code'] = X['cancellation_policy_code'].combine(X['trip_duration'],
+                                                                          lambda x, y: order_policies(x, y))
+
+    for i in range(0, 10):
+        X[f'{i * 10 + 1}-{(i + 1) * 10}'] = np.zeros(X.shape[0])
+    for idx, list_of_lists in enumerate(X['cancellation_policy_code']):
+        # Loop through the lists in the current list of lists
+        for lst in list_of_lists:
+            # Extract the day and percentage
+            day, percentage = int(lst[0]), int(lst[1])
+            # Determine the appropriate columns for the current percentage
+            cols = [f"{i * 10 + 1}-{(i + 1) * 10}" for i in range((percentage - 1) // 10 + 1) if i < 10]
+            # Insert the day into the appropriate columns
+            for col in cols:
+                if X.at[idx, col] == 0:
+                    X.at[idx, col] = str(day)
+    # Replace the NaNs with an empty string
+    X.fillna(0, inplace=True)
+
+    # drop cancellation_policy_code:
+    X = X.drop(['cancellation_policy_code'], axis=1)
+    return X
+
+def order_policies(policies, duration):
+    # policies = row['cancellation_policy_code']
+    # print(policies)
+    # duration = row['trip_duration']
+    if policies == 'UNKNOWON':  # TODO: check if needed
+        policies = '7D100P'
+    policies_arr = []
+    if "_" in policies:
+        policies_arr = policies.split("_")
+    else:
+        policies_arr.append(policies)
+    # print(policies,policies_arr)
+    if 'D' not in policies_arr[-1]:
+        # no show
+        policies_arr = policies_arr[:-1]
+
+    policies_arr = [[policy.split('D')[0], policy.split('D')[1]] for policy in policies_arr]
+    for tup in policies_arr:
+        if 'N' in tup[1]:
+            tup[1] = str(int((int(tup[1][:-1]) / (duration / 24)) * 100))
+        else:
+            tup[1] = tup[1][:-1]
+    return policies_arr
+
+
+
+
+
+def split_data_label(df: pd.DataFrame, label: str) -> (pd.DataFrame, pd.Series):
+    """
+    Split the data into X and y.
+    :param label:
+    :param df: DataFrame
+    :return: DataFrame, Series
+    """
+    X = df.drop([label], axis=1)
+    y = df[label]
+    return X, y
+
+
+def preprocess_Q1(X: pd.DataFrame, y: Optional[pd.Series] = None):
+    X, y = split_data_label(X, 'cancellation_datetime')
+    y = y.fillna(0).apply(lambda x: 1 if x != 0 else 0)
+    return X, y
 
 if __name__ == "__main__":
     path = "train_data.csv"
