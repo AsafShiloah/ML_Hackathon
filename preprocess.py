@@ -80,7 +80,6 @@ def preprocess_data(X: pd.DataFrame, flag_train: bool = True) -> pd.DataFrame:
     :return: DataFrame
     """
     # Drop columns
-    X = X.drop(['h_booking_id'], axis=1)
     X = process_dates(X)
 
 
