@@ -5,6 +5,9 @@ from typing import Optional, NoReturn
 import pycountry
 import numpy as np
 
+dummies_lst = ['hotel_country_code', 'charge_option', 'accommadation_type_name', 'origin_country_code',
+                                'language', 'original_payment_method', 'original_payment_type',
+                                'original_payment_currency', 'guest_nationality_country_name', 'customer_nationality']
 
 def get_country_code(country_name):
     try:
@@ -23,15 +26,18 @@ def load_data(path: str, parse_dates=None) -> DataFrame:
     return pd.read_csv(path, parse_dates=parse_dates)
 
 
-def preproceess_dummies(X: DataFrame, columns: list) -> DataFrame:
+def preproceess_dummies(X: DataFrame, columns: list, flag_train: bool = True) -> DataFrame:
     """
     Create dummies for each column in columns list
+    :param flag_train:
     :param X: DataFrame
     :param columns: list
     :return: DataFrame
     """
     for column in columns:
         X = pd.get_dummies(X, columns=[column], prefix=f'dummy_{column}_')
+    if not flag_train:
+        X = X.reindex(columns=train_cols, fill_value=0)
     return X
 
 
@@ -67,18 +73,16 @@ def preprocess_drop(X: DataFrame, columns: list) -> DataFrame:
     return X.drop(columns=columns)
 
 
-def preprocess_data(X: pd.DataFrame):
+def preprocess_data(X: pd.DataFrame, flag_train: bool = True) -> pd.DataFrame:
     """
     Preprocess the data.
     :param df: DataFrame
     :return: DataFrame
     """
-
+    # Drop columns
     X = X.drop(['h_booking_id'], axis=1)
     X = process_dates(X)
-    X = preproceess_dummies(X, ['hotel_country_code', 'charge_option', 'accommadation_type_name', 'origin_country_code',
-                                'language', 'original_payment_method', 'original_payment_type',
-                                'original_payment_currency', 'guest_nationality_country_name', 'customer_nationality'])
+
 
     # Calculate the number of orders per hotel_id
     X['no_orders_of_hotel'] = X.groupby('hotel_id')['hotel_id'].transform('count')
@@ -113,7 +117,11 @@ def preprocess_data(X: pd.DataFrame):
 
     """ -------------------------- cancellation policy handle --------------------------"""
     X['cancellation_policy_code'] = X['cancellation_policy_code'].combine(X['trip_duration'],
-                                                                          lambda x, y: order_policies(x, y))
+                                                                        lambda x, y: order_policies(x, y))
+    ############################################################
+    # reset index of X
+    X = X.reset_index(drop=True)
+
     for i in range(0, 10):
         X[f'{i * 10 + 1}-{(i + 1) * 10}'] = np.zeros(X.shape[0])
     for idx, list_of_lists in enumerate(X['cancellation_policy_code']):
@@ -127,15 +135,20 @@ def preprocess_data(X: pd.DataFrame):
             for col in cols:
                 if X.at[idx, col] == 0:
                     X.at[idx, col] = str(day)
+
     # Replace the NaNs with an empty string
     X.fillna(0, inplace=True)
 
     # drop cancellation_policy_code:
     # X = X.drop(['cancellation_policy_code'], axis=1)
+
     X = X.drop(
         columns=['cancellation_policy_code', 'booking_datetime', 'checkin_date', 'checkout_date', 'hotel_live_date',
-                 'h_customer_id', 'hotel_id', 'Unnamed: 0'])
-
+                 'h_customer_id', 'hotel_id'])
+    X = preproceess_dummies(X, dummies_lst, flag_train)
+    if flag_train:
+        global train_cols
+        train_cols = X.columns
     return X
 
 
