@@ -192,6 +192,12 @@ def preprocess_Q1(X: pd.DataFrame, y: Optional[pd.Series] = None):
     return X, y
 
 
+def preprocess_Q2(X: pd.DataFrame, y: Optional[pd.Series] = None):
+    X = X.drop(['cancellation_datetime'], axis=1)
+    X, y = split_data_label(X, 'original_selling_amount')
+    y = y.fillna(0)
+    return X, y
+
 if __name__ == "__main__":
     path = "train_data.csv"
     df = load_data(path, ['booking_datetime', 'checkin_date', 'checkout_date', 'hotel_live_date'])
