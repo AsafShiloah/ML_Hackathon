@@ -112,9 +112,28 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X['request_airport'] = X['request_airport'].fillna(0)
     X['request_earlycheckin'] = X['request_earlycheckin'].fillna(0)
 
-    # cancellation policy code:
-    df['cancellation_policy_code'] = df['cancellation_policy_code'].combine(df['trip_duration'],
+    """ -------------------------- cancellation policy handle --------------------------"""
+    X['cancellation_policy_code'] = X['cancellation_policy_code'].combine(X['trip_duration'],
                                                                             lambda x, y: order_policies(x, y))
+
+    for i in range(0, 10):
+        X[f'{i * 10 + 1}-{(i + 1) * 10}'] = np.zeros(X.shape[0])
+    for idx, list_of_lists in enumerate(X['cancellation_policy_code']):
+        # Loop through the lists in the current list of lists
+        for lst in list_of_lists:
+            # Extract the day and percentage
+            day, percentage = int(lst[0]), int(lst[1])
+            # Determine the appropriate columns for the current percentage
+            cols = [f"{i * 10 + 1}-{(i + 1) * 10}" for i in range((percentage - 1) // 10 + 1) if i < 10]
+            # Insert the day into the appropriate columns
+            for col in cols:
+                if X.at[idx, col] == 0:
+                    X.at[idx, col] = str(day)
+    # Replace the NaNs with an empty string
+    X.fillna(0, inplace=True)
+
+    #drop cancellation_policy_code:
+    X = X.drop['cancellation_policy_code']
 
 def order_policies(policies, duration):
     # policies = row['cancellation_policy_code']
@@ -173,12 +192,30 @@ if __name__ == "__main__":
     # print(df['cancellation_policy_code'].apply(lambda x: x.split('_') if '_' in x else x))
     # print(df['cancellation_policy_code'].apply(order_policies(df['cancellation_policy_code'])))
     # print(order_policies("7D100P_100P", 1))
-    df['trip_duration'] = ((df['checkout_date'] - df['checkin_date']).dt.total_seconds() / 3600)
-    # print(df['cancellation_policy_code'].apply(order_policies))
+    # df['trip_duration'] = ((df['checkout_date'] - df['checkin_date']).dt.total_seconds() / 3600)
+    # # print(df['cancellation_policy_code'].apply(order_policies))
+    #
+    # df['cancellation_policy_code'] = df['cancellation_policy_code'].combine(df['trip_duration'], lambda x, y: order_policies(x, y))
+    # # print(df['cancellation_policy_code'])
+    # for i in range(0,10):
+    #     df[f'{i * 10 + 1}-{(i + 1) * 10}'] = np.zeros(df.shape[0])
 
-    df['cancellation_policy_code'] = df['cancellation_policy_code'].combine(df['trip_duration'], lambda x, y: order_policies(x, y))
-    print(df['cancellation_policy_code'])
-    for i in range(1,11):
-        df[f'cancel_{i*10}% '] = np.zeros(df.shape[0])
+    # for idx, list_of_lists in enumerate(df['cancellation_policy_code']):
+    #     # Loop through the lists in the current list of lists
+    #     for lst in list_of_lists:
+    #         # Extract the day and percentage
+    #         day, percentage = int(lst[0]), int(lst[1])
+    #         # Determine the appropriate columns for the current percentage
+    #         cols = [f"{i * 10 + 1}-{(i + 1) * 10}" for i in range((percentage - 1) // 10 + 1) if i < 10]
+    #         # Insert the day into the appropriate columns
+    #
+    #         for col in cols:
+    #
+    #             if df.at[idx, col] == 0:
+    #                 df.at[idx, col] = str(day)
+    #
+    # # Replace the NaNs with an empty string
+    # df.fillna('', inplace=True)
+    # print(df[['cancellation_policy_code','1-10', '11-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90','91-100']])
 
 
