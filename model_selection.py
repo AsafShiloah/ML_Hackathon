@@ -134,15 +134,17 @@ def random_forrest(X_train, X_test, y_train, y_test):
     # Compute and print the F1 score
     f1 = f1_score(y_test, y_pred, average='macro')
     print('F1 Score: ', f1)
+    return
 
-    def omri(X,y):
-        params = [2, 4, 6, 8]
 
-        scores_by_depth = perform_cross_validation(X, y, params)
+def omri(X,y):
+    params = [2, 4, 6, 8]
 
-        # Print the average scores for each tree depth
-        for depth, score in scores_by_depth.items():
-            print(f"Tree Depth: {depth}, Average Score: {score}")
+    scores_by_depth = perform_cross_validation(X, y, params)
+
+    # Print the average scores for each tree depth
+    for depth, score in scores_by_depth.items():
+        print(f"Tree Depth: {depth}, Average Score: {score}")
 
 
 def ada_boost(X, y):
@@ -304,7 +306,7 @@ def main():
     # X_train, y_train = preprocess_train(X_train, y_train)
     # print(X_train.shape, y_train.shape)
 
-    # random_forrest(X_train, X_test, y_train, y_test)
+    random_forrest(X_train, X_test, y_train, y_test)
     # ridge_regression(X_train, X_test, y_train, y_test)
     # logistic_regression(X_train, X_test, y_train, y_test)
     # decision_trees(X_train, X_test, y_train, y_test)
@@ -312,7 +314,7 @@ def main():
 
     # random_forrest_k_cross(X, y)
     # ada_boost(X,y)
-    lasso_regression(X_train, X_test, y_train, y_test)
+    # lasso_regression(X_train, X_test, y_train, y_test)
 
 if __name__ == '__main__':
     np.random.seed(0)

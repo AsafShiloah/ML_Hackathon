@@ -74,7 +74,7 @@ def preprocess_data(X: pd.DataFrame):
     :return: DataFrame
     """
 
-    X = X.drop(['h_booking_id'], axis=1)
+    # X = X.drop(['h_booking_id'], axis=1)
     X = process_dates(X)
     X = preproceess_dummies(X, ['hotel_country_code', 'charge_option', 'accommadation_type_name', 'origin_country_code',
                                 'language', 'original_payment_method', 'original_payment_type',
@@ -187,6 +187,17 @@ def split_data_label(df: pd.DataFrame, label: str) -> (pd.DataFrame, pd.Series):
 def preprocess_Q1(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X, y = split_data_label(X, 'cancellation_datetime')
     y = y.fillna(0).apply(lambda x: 1 if x != 0 else 0)
+    return X, y
+
+def preprocess_Q2(X: pd.DataFrame, y: Optional[pd.Series] = None):
+    X, y = split_data_label(X, 'original_selling_amount')
+    # X = X[X['original_selling_amount'] < 1000]
+
+    # remove matching lines from y
+
+    # create dummies for cancellation_datetime
+    # X['cancellation_datetime'] = X['cancellation_datetime'].fillna(0)
+    # X = pd.get_dummies(X, 'cancellation_datetime')
     return X, y
 
 def preprocess_train(X: pd.DataFrame, y: Optional[pd.Series] = None):
