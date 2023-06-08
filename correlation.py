@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest, mutual_info_classif
 from sklearn.preprocessing import LabelEncoder
 
-def select_best_features(X, y, k=5):
+def select_best_features(X, y, k=1):
     # Encode categorical variables if present
     le = LabelEncoder()
     X_encoded = X.apply(le.fit_transform)
