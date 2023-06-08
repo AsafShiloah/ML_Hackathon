@@ -213,10 +213,10 @@ def main():
     # RFE(X,y)
     # print("finish RFE")
     # Lasso_correlation(X,y)
-    # print("finish Lasso_correlation")
-    # correlation_matrix(data)
-    # print("finish correlation_matrix")
-    mutual_information(data)
+    print("finish Lasso_correlation")
+    correlation_matrix(data)
+    print("finish correlation_matrix")
+    # mutual_information(data)
 
 
 

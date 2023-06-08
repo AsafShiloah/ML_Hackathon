@@ -9,6 +9,7 @@ dummies_lst = ['hotel_country_code', 'charge_option', 'accommadation_type_name',
                                 'language', 'original_payment_method', 'original_payment_type',
                                 'original_payment_currency', 'guest_nationality_country_name', 'customer_nationality']
 
+
 def get_country_code(country_name):
     try:
         return pycountry.countries.get(name=country_name).alpha_2
