@@ -3,6 +3,7 @@ from pandas import DataFrame
 import sklearn as sk
 from typing import Optional, NoReturn
 import pycountry
+import numpy as np
 
 
 def get_country_code(country_name):
@@ -60,7 +61,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     """ -------------------------- count stuff END --------------------------"""
 
     X['customer_nationality'] = X['customer_nationality'].fillna(get_country_code(X['country_name'])) if X[
-        'country_name'] else X['country_name'].fillna('KR')
+        'country_name'] else X['country_name'].fillna(X['country_name'].mode()[0])
 
     # todo: change all countries to countries code
 
@@ -111,9 +112,40 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
     X['request_airport'] = X['request_airport'].fillna(0)
     X['request_earlycheckin'] = X['request_earlycheckin'].fillna(0)
 
-    # cancelation policy code:
+    # cancellation policy code:
+    df['cancellation_policy_code'] = df['cancellation_policy_code'].combine(df['trip_duration'],
+                                                                            lambda x, y: order_policies(x, y))
 
-    # X['dayes_before_checkin'] = X['cancellation_policy_code'].fillna(0)
+def order_policies(policies, duration):
+    # policies = row['cancellation_policy_code']
+    # print(policies)
+    # duration = row['trip_duration']
+    if policies == 'UNKNOWON': # TODO: check if needed
+        policies = '7D100P'
+    policies_arr = []
+    if "_" in policies:
+        policies_arr = policies.split("_")
+    else:
+        policies_arr.append(policies)
+    # print(policies,policies_arr)
+    if 'D' not in policies_arr[-1]:
+        # no show
+        policies_arr = policies_arr[:-1]
+
+    policies_arr = [[policy.split('D')[0], policy.split('D')[1]] for policy in policies_arr]
+    for tup in policies_arr:
+        if 'N' in tup[1]:
+            tup[1] = str(int((int(tup[1][:-1])/(duration/24))*100))
+        else:
+            tup[1] = tup[1][:-1]
+    return policies_arr
+
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -132,3 +164,21 @@ if __name__ == "__main__":
     # # print('origin_country_code:', df['origin_country_code'].dropna().unique())
     # print('origin_country_code:', df['origin_country_code'].describe())
     # TODO split no show via _ and then via 'D'
+        # todo: handle UNKNOWN
+    # print(df['origin_country_code'].mode()[0])
+    # df['cancellation_policy_code'] = df['cancellation_policy_code'].str.split('_') if '_' in df['cancellation_policy_code'] else df['cancellation_policy_code']
+    # print(df['cancellation_policy_code'].unique())
+    # df['cancellation_policy_code']= [(policy.split('D')[0], policy.split('D')[1].rstrip('P')) for policy in df['cancellation_policy_code']]
+    # print(df['cancellation_policy_code'])
+    # print(df['cancellation_policy_code'].apply(lambda x: x.split('_') if '_' in x else x))
+    # print(df['cancellation_policy_code'].apply(order_policies(df['cancellation_policy_code'])))
+    # print(order_policies("7D100P_100P", 1))
+    df['trip_duration'] = ((df['checkout_date'] - df['checkin_date']).dt.total_seconds() / 3600)
+    # print(df['cancellation_policy_code'].apply(order_policies))
+
+    df['cancellation_policy_code'] = df['cancellation_policy_code'].combine(df['trip_duration'], lambda x, y: order_policies(x, y))
+    print(df['cancellation_policy_code'])
+    for i in range(1,11):
+        df[f'cancel_{i*10}% '] = np.zeros(df.shape[0])
+
+
