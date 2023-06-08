@@ -63,7 +63,7 @@ def preprocess_data(X: pd.DataFrame, y: Optional[pd.Series] = None):
         'country_name'] else X['country_name'].fillna('KR')
 
     # todo: change all countries to countries code
-    
+
     # fill na in origin country with
     X['origin_country_code'] = X['origin_country_code'].fillna(get_country_code(X['country_name'])) if X[
         'country_name'] else X['country_name'].fillna('KR')
