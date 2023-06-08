@@ -1,31 +1,44 @@
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.linear_model import Lasso, LinearRegression
-from sklearn.metrics import mean_squared_error
-
-from preprocess import *
-import numpy as np
-import plotly.express as px
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
-import pandas as pd
-from sklearn.linear_model import Lasso
+import math
 
 from preprocess import *
 from utils import *
 
 from sklearn.tree import DecisionTreeClassifier
-import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, make_scorer
 import plotly.figure_factory as ff
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
-import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.linear_model import RidgeClassifier
-import joblib
+
+
+def decision_trees(X_train, X_test, y_train, y_test):
+    f1_scores = []
+    max_depths = [1, 2, 3, 4, 5, 6, 7, 8]
+    for max_depth in max_depths:
+        # Initialize the Decision Tree Classifier with varying max_depth
+        dt = DecisionTreeClassifier(max_depth=max_depth)
+
+        # Fit the data to the model
+        dt.fit(X_train, y_train)
+
+        # Predict the values for the test set
+        y_pred = dt.predict(X_test)
+
+        # Calculate F1 score
+        f1 = f1_score(y_test, y_pred, average='macro')
+        f1_scores.append(f1)
+
+    # Create a DataFrame for visualization
+    df = pd.DataFrame({'Max Depth': max_depths, 'F1 Score': f1_scores})
+
+    # Plotting using Plotly
+    fig = px.line(df, x='Max Depth', y='F1 Score', title='Decision Tree Performance')
+    fig.show()
 
 
 def linear_regression(X_train, X_test, y_train, y_test):
@@ -414,20 +427,194 @@ def confusion_matrix(y_test, y_pred):
     fig.show()
 
 
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
+def decision_tree_loss(X_train, X_test, y_train, y_test):
+    train_loss = []
+    test_loss = []
+
+    max_depths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    for depth in max_depths:
+        print(depth)
+        # Initialize the model
+        model = DecisionTreeRegressor(max_depth=depth)
+
+        # Fit the model
+        model.fit(X_train, y_train)
+
+        # Predict the target variable for the train set
+        train_predictions = model.predict(X_train)
+
+        # Predict the target variable for the test set
+        test_predictions = model.predict(X_test)
+
+        # Calculate the RMSE for train and test sets
+        train_rmse = sqrt(mean_squared_error(y_train, train_predictions))
+        test_rmse = sqrt(mean_squared_error(y_test, test_predictions))
+
+        # Append the loss values to the lists
+        train_loss.append(train_rmse)
+        test_loss.append(test_rmse)
+
+    # Create a DataFrame for visualization
+    df = pd.DataFrame({'Max Depth': max_depths, 'Train Loss': train_loss, 'Test Loss': test_loss})
+
+    # Plotting using Plotly
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df['Max Depth'], y=df['Train Loss'], mode='lines+markers', name='Train Loss'))
+    fig.add_trace(go.Scatter(x=df['Max Depth'], y=df['Test Loss'], mode='lines+markers', name='Test Loss'))
+    fig.update_layout(title='Loss Over Train and Test Sets',
+                      xaxis_title='Max Depth',
+                      yaxis_title='Loss',
+                      legend=dict(x=0.7, y=0.95),
+                      )
+    fig.show()
+
+
+def lasso_regression_graph(X_train, X_test, y_train, y_test):
+    rmse_scores = []
+    alphas = [0.1, 0.5, 1, 2, 5, 10]
+    for alpha in alphas:
+        print(alpha)
+        # Initialize the model
+        model = Lasso(alpha=alpha)
+
+        # Fit the model
+        model.fit(X_train, y_train)
+
+        # Predict the selling amount for the test set
+        predictions = model.predict(X_test)
+
+        # Calculate the RMSE
+        rmse = math.sqrt(mean_squared_error(y_test, predictions))
+        rmse_scores.append(rmse)
+
+    # Create a DataFrame for visualization
+    df = pd.DataFrame({'Alpha': alphas, 'RMSE': rmse_scores})
+
+    # Plotting using Plotly
+    fig = px.line(df, x='Alpha', y='RMSE', title='Lasso Regression Performance')
+    fig.show()
+
+
 
 def main():
     data = load_data('train_data.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
                                                     'hotel_live_date'])
     data = preprocess_data(data)
-    X, y = preprocess_Q2(data)
-    predict_and_save(X,y)
+    X, y = preprocess_Q1(data)
+    # predict_and_save(X,y)
     # Split the data into a training set and a test set
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     # y_train = y_train[y_train < 8000]
     # X_train = X_train.loc[y_train.index]
+    # random_forrest_by_k(X_train, X_test, y_train, y_test)
+    # decision_trees(X_train, X_test, y_train, y_test)
+    # lasso_regression_graph(X_train, X_test, y_train, y_test)
+    # decision_tree_loss(X_train, X_test, y_train, y_test)
+    # random_forest_loss(X_train, X_test, y_train, y_test)
+    lasso_loss(X_train, X_test, y_train, y_test)
+
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
+def random_forest_loss(X_train, X_test, y_train, y_test):
+    train_loss = []
+    test_loss = []
+    sizes = [1, 21, 41, 61, 81, 101]
+    for size in sizes:
+        # Initialize the model
+        print(size)
+        model = RandomForestRegressor(n_estimators=size)
+
+        # Fit the model
+        model.fit(X_train, y_train)
+
+        # Predict the target variable for the train set
+        train_predictions = model.predict(X_train)
+
+        # Predict the target variable for the test set
+        test_predictions = model.predict(X_test)
+
+        # Calculate the RMSE for train and test sets
+        train_rmse = sqrt(mean_squared_error(y_train, train_predictions))
+        test_rmse = sqrt(mean_squared_error(y_test, test_predictions))
+
+        # Append the loss values to the lists
+        train_loss.append(train_rmse)
+        test_loss.append(test_rmse)
+
+    # Create a DataFrame for visualization
+    df = pd.DataFrame({'Ensemble Size': sizes, 'Train Loss': train_loss, 'Test Loss': test_loss})
+
+    # Plotting using Plotly
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df['Ensemble Size'], y=df['Train Loss'], mode='lines+markers', name='Train Loss'))
+    fig.add_trace(go.Scatter(x=df['Ensemble Size'], y=df['Test Loss'], mode='lines+markers', name='Test Loss'))
+    fig.update_layout(title='Loss Over Train and Test Sets',
+                      xaxis_title='Ensemble Size',
+                      yaxis_title='Loss',
+                      legend=dict(x=0.7, y=0.95),
+                      )
+    fig.show()
 
 
 
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from sklearn.linear_model import Lasso
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
+def lasso_loss(X_train, X_test, y_train, y_test):
+    train_loss = []
+    test_loss = []
+    alphas = [0.1, 0.5, 1, 2, 5, 10]
+    for alpha in alphas:
+        print(alpha)
+        # Initialize the model
+        model = Lasso(alpha=alpha)
+
+        # Fit the model
+        model.fit(X_train, y_train)
+
+        # Predict the target variable for the train set
+        train_predictions = model.predict(X_train)
+
+        # Predict the target variable for the test set
+        test_predictions = model.predict(X_test)
+
+        # Calculate the RMSE for train and test sets
+        train_rmse = sqrt(mean_squared_error(y_train, train_predictions))
+        test_rmse = sqrt(mean_squared_error(y_test, test_predictions))
+
+        # Append the loss values to the lists
+        train_loss.append(train_rmse)
+        test_loss.append(test_rmse)
+
+    # Create a DataFrame for visualization
+    df = pd.DataFrame({'Alpha': alphas, 'Train Loss': train_loss, 'Test Loss': test_loss})
+
+    # Plotting using Plotly
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df['Alpha'], y=df['Train Loss'], mode='lines+markers', name='Train Loss'))
+    fig.add_trace(go.Scatter(x=df['Alpha'], y=df['Test Loss'], mode='lines+markers', name='Test Loss'))
+    fig.update_layout(title='Loss Over Train and Test Sets',
+                      xaxis_title='Alpha',
+                      yaxis_title='Loss',
+                      legend=dict(x=0.7, y=0.95),
+                      )
+    fig.show()
 
 if __name__ == '__main__':
     np.random.seed(0)

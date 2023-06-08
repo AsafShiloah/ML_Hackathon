@@ -10,19 +10,34 @@ from sklearn.model_selection import cross_val_score
 import joblib
 
 
+import plotly.express as px
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import f1_score
+
 def decision_trees(X_train, X_test, y_train, y_test):
-    # Initialize the Decision Tree Classifier
-    dt = DecisionTreeClassifier(max_depth=4)
+    f1_scores = []
+    max_depths = [1, 2, 3, 4, 5, 6, 7, 8]
+    for max_depth in max_depths:
+        # Initialize the Decision Tree Classifier with varying max_depth
+        dt = DecisionTreeClassifier(max_depth=max_depth)
 
-    # Fit the data to the model
-    dt.fit(X_train, y_train)
+        # Fit the data to the model
+        dt.fit(X_train, y_train)
 
-    # Predict the values for the test set
-    y_pred = dt.predict(X_test)
+        # Predict the values for the test set
+        y_pred = dt.predict(X_test)
 
-    # Printing the accuracy of the model
-    f1 = f1_score(y_test, y_pred, average='macro')
-    print('Decision Tree Accuracy: ', f1)
+        # Calculate F1 score
+        f1 = f1_score(y_test, y_pred, average='macro')
+        f1_scores.append(f1)
+
+    # Create a DataFrame for visualization
+    df = pd.DataFrame({'Max Depth': max_depths, 'F1 Score': f1_scores})
+
+    # Plotting using Plotly
+    fig = px.line(df, x='Max Depth', y='F1 Score', title='Decision Tree Performance')
+    fig.show()
 
 
 def perform_cross_validation(X, y, depths, cv=5):
@@ -114,6 +129,7 @@ def main():
     # result = pd.concat([data['h_booking_id'], pd.Series(y_pred)], axis=1)
     # result.columns = ['id', 'cancellation']
     # result.to_csv('agoda_cancellation_prediction.csv', index=False)
+    # decision_trees(X_train, X_test, y_train, y_test)
 
 
 if __name__ == '__main__':

@@ -22,25 +22,12 @@ def random_forrest(X_train, X_test, y_train, y_test=None):
     return y_pred, rf
 
 
-def lasso_regression(X_train, X_test, y_train, y_test):
-    import pandas as pd
-
-    # Assuming X_train, y_train, X_test, y_test are already defined
-
-    # Initialize the model
-    model = Lasso(alpha=0.1)  # the alpha parameter controls the degree of regularization
-
-    # Fit the model
-    model.fit(X_train, y_train)
-
-    # Predict the selling amount for the test set
-    predictions = model.predict(X_test)
-
-    # Calculate the RMSE
-    # rmse = sqrt(mean_squared_error(y_test, predictions))
-    # print(f"RMSE: {rmse}")
-    return predictions, model
-
+import numpy as np
+import pandas as pd
+import plotly.express as px
+from sklearn.linear_model import Lasso
+from sklearn.metrics import mean_squared_error
+from math import sqrt
 
 def elastic_net_regression(X_train, X_test, y_train, y_test):
 
@@ -62,8 +49,6 @@ def elastic_net_regression(X_train, X_test, y_train, y_test):
     # rmse = sqrt(mean_squared_error(y_test, predictions))
     # print(f"RMSE: {rmse}")
     return predictions, model
-
-
 
 def main():
     train = load_data('agoda_cancellation_train.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
