@@ -160,19 +160,35 @@ def RFE(X,y):
     fig.show()
 
 
-def correlation_matrix(data):
+def correlation_matrix(X, y):
+    import pandas as pd
     import plotly.figure_factory as ff
+
+    # Combine X and y into a single DataFrame
+    data = pd.concat([X, y], axis=1)
 
     # Calculate correlation matrix
     corr = data.corr()
 
+    # Get the top 5 most correlated features with the target variable
+    top_features = corr.nlargest(5, y.name)[y.name].index
+
+    # Create a correlation matrix for the top features
+    corr_top_features = data[top_features].corr()
+
     # Create a heatmap
-    fig = ff.create_annotated_heatmap(z=corr.values,
-                                      x=list(corr.columns),
-                                      y=list(corr.index),
-                                      annotation_text=corr.round(2).values,
+    fig = ff.create_annotated_heatmap(z=corr_top_features.values,
+                                      x=list(corr_top_features.columns),
+                                      y=list(corr_top_features.index),
+                                      annotation_text=corr_top_features.round(2).values,
+                                      colorscale='Viridis',
                                       showscale=True)
-    fig.write_image('feature_correlation_matrix.png')
+    fig.update_layout(title='Top 5 Most Correlated Features with Target',
+                      xaxis_title='Features',
+                      yaxis_title='Features')
+    fig.show()
+
+
 
 
 def Lasso_correlation(X,y):
@@ -210,13 +226,15 @@ def main():
     X, y = preprocess_Q1(data)
 
     # random_forest_classifier(data)
+    # print("random_forest_classifier")
     # RFE(X,y)
     # print("finish RFE")
     # Lasso_correlation(X,y)
-    print("finish Lasso_correlation")
-    correlation_matrix(data)
+    # print("finish Lasso_correlation")
+    correlation_matrix(X,y)
     print("finish correlation_matrix")
     # mutual_information(data)
+    # print("mutual_information")
 
 
 
