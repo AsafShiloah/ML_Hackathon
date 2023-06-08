@@ -172,9 +172,6 @@ def order_policies(policies, duration):
     return policies_arr
 
 
-
-
-
 def split_data_label(df: pd.DataFrame, label: str) -> (pd.DataFrame, pd.Series):
     """
     Split the data into X and y.
