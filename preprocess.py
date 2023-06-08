@@ -4,6 +4,7 @@ import sklearn as sk
 from typing import Optional, NoReturn
 import pycountry
 import numpy as np
+import joblib
 
 dummies_lst = ['hotel_country_code', 'charge_option', 'accommadation_type_name', 'origin_country_code',
                                 'language', 'original_payment_method', 'original_payment_type',
@@ -37,6 +38,7 @@ def preproceess_dummies(X: DataFrame, columns: list, flag_train: bool = True) ->
     for column in columns:
         X = pd.get_dummies(X, columns=[column], prefix=f'dummy_{column}_')
     if not flag_train:
+        train_cols = joblib.load('train_cols.pkl')
         X = X.reindex(columns=train_cols, fill_value=0)
     return X
 
@@ -146,8 +148,8 @@ def preprocess_data(X: pd.DataFrame, flag_train: bool = True) -> pd.DataFrame:
                  'h_customer_id', 'hotel_id'])
     X = preproceess_dummies(X, dummies_lst, flag_train)
     if flag_train:
-        global train_cols
         train_cols = X.columns
+        joblib.dump(train_cols, 'train_cols.pkl')
     return X
 
 
