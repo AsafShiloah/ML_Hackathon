@@ -66,17 +66,18 @@ def elastic_net_regression(X_train, X_test, y_train, y_test):
 
 
 def main():
-    data = load_data('train_data.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
+    train = load_data('agoda_cancellation_train.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
                                               'hotel_live_date'])
     # break data into two parts
-    data1, data2 = train_test_split(data, test_size=0.5, random_state=42)
-    X1, y1 = preprocess_Q1(data1)
-    X2, y2 = preprocess_Q2(data2)
+    train1, train2 = train_test_split(train, test_size=0.5, random_state=42)
+    X1, y1 = preprocess_Q1(train1)
+    X2_train, y2_train = preprocess_Q2(train2)
 
     # Split the data into a training set and a test set
     X1 = preprocess_data(X1)
 
-    X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.2, random_state=42)
+    X2_test = load_data('Agoda_Test_2.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
+                                                     'hotel_live_date'])
 
     X2_train = preprocess_data(X2_train, flag_train=False)
     X2_test = preprocess_data(X2_test, flag_train=False)
@@ -88,21 +89,24 @@ def main():
     X2_test = X2_test.drop(['h_booking_id'], axis=1)
 
     """return Q1"""
-    rf_pred_train, rf = random_forrest(X1, X2_train, y1)
-    rf_pred_test, rf = random_forrest(X1, X2_test, y1)
+    rf = RandomForestClassifier(n_estimators=100)
+    rf.fit(X1, y1)
+    rf_pred_train = rf.predict(X2_train)
+    rf_pred_test = rf.predict(X2_test)
 
     X2_train['cancellation_datetime'] = rf_pred_train
     X2_test['cancellation_datetime'] = rf_pred_test
 
-    y2_test = y2_test.reset_index(drop=True)
-
-    y_pred, lasso = lasso_regression(X2_train, X2_test, y2_train, y2_test)
+    # y2_test = y2_test.reset_index(drop=True)
+    lasso = Lasso(alpha=0.1)
+    lasso.fit(X2_train, y2_train)
+    y_pred = lasso.predict(X2_test)
 
     # change y_pred to -1 where r_pred is 0
     y_pred = np.where(rf_pred_test == 0, -1, y_pred)
 
     result = pd.concat([id, pd.Series(y_pred)], axis=1)
-    result.columns = [id, 'predicted_selling_amount']
+    result.columns = ['id', 'predicted_selling_amount']
     result.to_csv('agoda_cost_of_cancellation.csv', index=False)
     joblib.dump(lasso, 'model2.pkl')
 
