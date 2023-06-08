@@ -1,3 +1,5 @@
+from sklearn.linear_model import Lasso
+
 from preprocess import *
 from utils import *
 
@@ -7,7 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
 from sklearn.metrics import confusion_matrix, make_scorer
 import plotly.figure_factory as ff
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import f1_score
 from sklearn.ensemble import RandomForestClassifier
@@ -18,6 +20,7 @@ from sklearn.metrics import f1_score
 from sklearn.manifold import Isomap
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import RidgeClassifier
 
 def logistic_regression(X_train, X_test, y_train, y_test):
     # Initializing the logistic regression model
@@ -155,7 +158,6 @@ def ada_boost(X, y):
     print("Average F1 Score (Macro):", scores.mean())
 
 
-
 def random_forrest_k_cross(X, y):
     # Create the Random Forest classifier
 
@@ -167,6 +169,7 @@ def random_forrest_k_cross(X, y):
 
     # Print the average F1 score across all folds
     print("Average F1 Score (Macro):", scores.mean())
+
 
 def random_forrest_by_k(X_train, X_test, y_train, y_test):
     # Define a range of n_estimators values to try
@@ -201,6 +204,95 @@ def random_forrest_by_k(X_train, X_test, y_train, y_test):
     fig = px.line(df, x='n_estimators', y='F1 Score', title='F1 Score as a Function of n_estimators')
     fig.show()
 
+
+def ridge_regression(X_train, X_test, y_train, y_test):
+    # Create the Ridge Classifier
+    ridge_classifier = RidgeClassifier()
+
+    # Define the alpha values to search
+    alphas = [0.1, 1.0, 10.0]
+
+    # Perform grid search
+    param_grid = {'alpha': alphas}
+    grid_search = GridSearchCV(ridge_classifier, param_grid, cv=5, scoring='f1_macro')
+    grid_search.fit(X_train, y_train)
+
+    # Get the alpha values and corresponding mean test scores
+    alphas = grid_search.cv_results_['param_alpha'].data.astype(float)
+    mean_test_scores = grid_search.cv_results_['mean_test_score']
+
+    # Plot the results
+    fig = go.Figure(data=go.Scatter(x=alphas, y=mean_test_scores, mode='markers'))
+    fig.update_layout(
+        xaxis_type='log',
+        xaxis_title='Alpha',
+        yaxis_title='Mean F1 Score (Macro)',
+        title='Grid Search: Alpha vs. Mean F1 Score'
+    )
+    fig.show()
+
+    # Get the best alpha value
+    best_alpha = grid_search.best_params_['alpha']
+
+    # Fit the data to the model with the best alpha
+    ridge_classifier_best = RidgeClassifier(alpha=best_alpha)
+    ridge_classifier_best.fit(X_train, y_train)
+
+    # Predict the target variable for the test set
+    y_pred = ridge_classifier_best.predict(X_test)
+
+    # Calculate and print the F1 score
+    f1 = f1_score(y_test, y_pred, average='macro')
+    print('Best Alpha:', best_alpha)
+    print('F1 Score (Macro):', f1)
+
+
+def lasso_regression(X_train, X_test, y_train, y_test):
+    # Create the Lasso regression model
+    lasso = Lasso()
+
+    # Define the alpha values to search
+    alphas = [0.1, 1.0, 10.0]
+
+    # Perform grid search
+    param_grid = {'alpha': alphas}
+    grid_search = GridSearchCV(lasso, param_grid, cv=5, scoring='f1_macro')
+    grid_search.fit(X_train, y_train)
+
+    # Get the alpha values and corresponding mean test scores
+    alphas = grid_search.cv_results_['param_alpha'].data.astype(float)
+    mean_test_scores = grid_search.cv_results_['mean_test_score']
+
+    # Plot the results
+    fig = go.Figure(data=go.Scatter(x=alphas, y=mean_test_scores, mode='markers'))
+    fig.update_layout(
+        xaxis_type='log',
+        xaxis_title='Alpha',
+        yaxis_title='F1 Score (Macro)',
+        title='Grid Search: Alpha vs. F1 Score (Macro)'
+    )
+    fig.show()
+
+    # Get the best alpha value
+    best_alpha = grid_search.best_params_['alpha']
+
+    # Fit the data to the model with the best alpha
+    lasso_best = Lasso(alpha=best_alpha)
+    lasso_best.fit(X_train, y_train)
+
+    # Predict the target variable for the test set
+    y_pred = lasso_best.predict(X_test)
+
+    # Convert predictions to binary values based on a threshold
+    threshold = 0.5
+    y_pred_binary = np.where(y_pred >= threshold, 1, 0)
+
+    # Calculate and print the F1 score
+    f1_macro = f1_score(y_test, y_pred_binary, average='macro')
+    print('Best Alpha:', best_alpha)
+    print('F1 Score (Macro):', f1_macro)
+
+
 def main():
     data = load_data('train_data.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
                                                     'hotel_live_date'])
@@ -213,12 +305,14 @@ def main():
     # print(X_train.shape, y_train.shape)
 
     # random_forrest(X_train, X_test, y_train, y_test)
+    # ridge_regression(X_train, X_test, y_train, y_test)
     # logistic_regression(X_train, X_test, y_train, y_test)
     # decision_trees(X_train, X_test, y_train, y_test)
     # random_forrest_by_k(X_train, X_test, y_train, y_test)
 
     # random_forrest_k_cross(X, y)
-    ada_boost(X,y)
+    # ada_boost(X,y)
+    lasso_regression(X_train, X_test, y_train, y_test)
 
 if __name__ == '__main__':
     np.random.seed(0)
