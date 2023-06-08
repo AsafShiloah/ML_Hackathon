@@ -1,3 +1,5 @@
+import sys
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import Lasso
 from sklearn.model_selection import train_test_split
@@ -150,4 +152,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(['agoda_cancellation_train.csv', 'Agoda_Test_1.csv', 'Agoda_Test_2.csv'])
+    main(sys.argv[1:])
+
+

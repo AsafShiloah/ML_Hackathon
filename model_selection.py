@@ -5,8 +5,6 @@ from utils import *
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, make_scorer
-import plotly.figure_factory as ff
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
@@ -14,6 +12,15 @@ from sklearn.metrics import f1_score
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.linear_model import RidgeClassifier
+from sklearn.linear_model import Lasso
+from sklearn.tree import DecisionTreeRegressor
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
 
 
 def decision_trees(X_train, X_test, y_train, y_test):
@@ -233,7 +240,6 @@ def predict_and_save(X, y, X_cancel, y_cancel):
     output.to_csv('agoda_cost_of_cancellation.csv', index=False)
 
 
-
 def ada_boost(X, y):
 
     # Create the AdaBoost classifier
@@ -336,50 +342,6 @@ def ridge_regression(X_train, X_test, y_train, y_test):
     print('F1 Score (Macro):', f1)
 
 
-def lasso_regression(X_train, X_test, y_train, y_test):
-    # Create the Lasso regression model
-    lasso = Lasso()
-
-    # Define the alpha values to search
-    alphas = [0.1, 1.0, 10.0]
-
-    # Perform grid search
-    param_grid = {'alpha': alphas}
-    grid_search = GridSearchCV(lasso, param_grid, cv=5, scoring='f1_macro')
-    grid_search.fit(X_train, y_train)
-
-    # Get the alpha values and corresponding mean test scores
-    alphas = grid_search.cv_results_['param_alpha'].data.astype(float)
-    mean_test_scores = grid_search.cv_results_['mean_test_score']
-
-    # Plot the results
-    fig = go.Figure(data=go.Scatter(x=alphas, y=mean_test_scores, mode='markers'))
-    fig.update_layout(
-        xaxis_type='log',
-        xaxis_title='Alpha',
-        yaxis_title='F1 Score (Macro)',
-        title='Grid Search: Alpha vs. F1 Score (Macro)'
-    )
-    fig.show()
-
-    # Get the best alpha value
-    best_alpha = grid_search.best_params_['alpha']
-
-    # Fit the data to the model with the best alpha
-    lasso_best = Lasso(alpha=best_alpha)
-    lasso_best.fit(X_train, y_train)
-
-    # Predict the target variable for the test set
-    y_pred = lasso_best.predict(X_test)
-
-    # Convert predictions to binary values based on a threshold
-    threshold = 0.5
-    y_pred_binary = np.where(y_pred >= threshold, 1, 0)
-
-    # Calculate and print the F1 score
-    f1_macro = f1_score(y_test, y_pred_binary, average='macro')
-    print('Best Alpha:', best_alpha)
-    print('F1 Score (Macro):', f1_macro)
 
 def logistic_regression(X_train, X_test, y_train, y_test):
     # Initializing the logistic regression model
@@ -411,26 +373,8 @@ def knn(X_train, X_test, y_train, y_test):
     print('F1 Score: ', f1)
 
 
-def confusion_matrix(y_test, y_pred):
-    # Calculate Confusion Matrix
-    cm = confusion_matrix(y_test, y_pred)
-
-    # Convert Confusion Matrix to DataFrame
-    cm_df = pd.DataFrame(cm, index=[i for i in "01"],
-                         columns=[i for i in "01"])
-
-    # Create a heatmap using Plotly
-    fig = ff.create_annotated_heatmap(z=cm, x=list(cm_df.columns), y=list(cm_df.index), colorscale='Viridis')
-    fig.update_layout(title_text='<i><b>Confusion matrix</b></i>', xaxis=dict(title='Predicted label'),
-                      yaxis=dict(title='True label'))
-
-    fig.show()
 
 
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 
@@ -502,7 +446,6 @@ def lasso_regression_graph(X_train, X_test, y_train, y_test):
     fig.show()
 
 
-
 def main():
     data = load_data('train_data.csv', parse_dates=['booking_datetime', 'checkin_date', 'checkout_date',
                                                     'hotel_live_date'])
@@ -520,12 +463,6 @@ def main():
     # random_forest_loss(X_train, X_test, y_train, y_test)
     lasso_loss(X_train, X_test, y_train, y_test)
 
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
-from math import sqrt
 
 def random_forest_loss(X_train, X_test, y_train, y_test):
     train_loss = []
@@ -567,14 +504,6 @@ def random_forest_loss(X_train, X_test, y_train, y_test):
                       )
     fig.show()
 
-
-
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-from sklearn.linear_model import Lasso
-from sklearn.metrics import mean_squared_error
-from math import sqrt
 
 def lasso_loss(X_train, X_test, y_train, y_test):
     train_loss = []
