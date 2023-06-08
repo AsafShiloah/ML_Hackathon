@@ -18,7 +18,7 @@ def save_to_csv(data, path):
 
 
 def main():
-    pd.set_option('display.max_rows', None)
+    # pd.set_option('display.max_rows', None)
     # pd.set_option('display.max_cols', None)
 
     # Convert specific columns to DateTime type for date-related operations
@@ -31,17 +31,21 @@ def main():
     msno.bar(data)
     msno.heatmap(data)
 
-
     # drop h_booking_id
     data = data.drop(['h_booking_id'], axis=1)
 
     """ -------------------------- preprocess dates START --------------------------"""
 
     # Calculate trip duration in hours
-    data['trip_duration'] = (data['checkout_date'] - data['checkin_date']).dt.total_seconds() / 3600
+    data['trip_duration'] = (data['checkout_date'] - data['checkin_date']).dt.total_seconds() / (3600)
 
     # Calculate number of days before booking
-    data['days_before_booking'] = (data['checkin_date'] - data['booking_datetime']).dt.total_seconds() / 3600
+    data['days_before_booking'] = (data['checkin_date'] - data['booking_datetime']).dt.total_seconds() / (3600)
+    print(data['days_before_booking'].describe())
+
+    # plot bar chart of days before booking
+    fig = px.histogram(data, x="trip_duration", nbins=100)
+    fig.show()
 
     # Check if check-in date is a weekend
     data['is_weekend'] = data['checkin_date'].dt.weekday.isin([5, 6])
@@ -96,6 +100,10 @@ def main():
     """ -------------------------- dummies values END --------------------------"""
 
     # todo: deal with out of range and mispelled values null values etc.
+
+    # print(data['cancellation_policy_code'])
+    # break 'cancellation_policy by underscore to binary columns
+
 
 
 if __name__ == "__main__":
